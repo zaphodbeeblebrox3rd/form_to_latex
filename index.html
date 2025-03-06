@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaTeX Entry Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .preview {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        #currentFile {
+            margin-top: 10px;
+            color: #666;
+            font-style: italic;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .status.error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>LaTeX Entry Form</h1>
+        <div id="currentFile"></div>
+        <form id="latexForm">
+            <div class="form-group">
+                <label for="entry_name">Entry Name:</label>
+                <input type="text" id="entry_name" required>
+            </div>
+            <div class="form-group">
+                <label for="authors">Authors:</label>
+                <input type="text" id="authors" required>
+            </div>
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <textarea id="title" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="source">Source:</label>
+                <input type="text" id="source">
+            </div>
+            <div class="form-group">
+                <label for="venue">Venue:</label>
+                <input type="text" id="venue">
+            </div>
+            <div class="form-group">
+                <label for="date">Date:</label>
+                <input type="text" id="date" required>
+            </div>
+            <button type="submit">Add Entry</button>
+        </form>
+        
+        <div class="preview" id="preview"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}${month}${day}`;
+        }
+
+        function formatDisplayDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatLatexEntry(formData) {
+            const currentDate = formatDisplayDate(new Date());
+            const entryName = formData.entry_name.replace(/\s+/g, '_');
+            
+            return `# UPDATED ${currentDate}
+
+\\begin{${entryName}}
+\\author{${formData.authors}}
+\\title{${formData.title}}
+\\source{${formData.source}}
+\\venue{${formData.venue}}
+\\date{${formData.date}}
+\\end{${entryName}}`;
+        }
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+        }
+
+        // Update current file display
+        function updateCurrentFileDisplay() {
+            const now = new Date();
+            const fileName = `${formatDate(now)}.odd`;
+            document.getElementById('currentFile').textContent = `Current file: ${fileName}`;
+        }
+
+        // Initial display
+        updateCurrentFileDisplay();
+
+        // Update display every minute
+        setInterval(updateCurrentFileDisplay, 60000);
+
+        document.getElementById('latexForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                entry_name: document.getElementById('entry_name').value,
+                authors: document.getElementById('authors').value,
+                title: document.getElementById('title').value,
+                source: document.getElementById('source').value,
+                venue: document.getElementById('venue').value,
+                date: document.getElementById('date').value
+            };
+
+            const latexEntry = formatLatexEntry(formData);
+            document.getElementById('preview').textContent = latexEntry;
+
+            try {
+                const response = await fetch('/api/entry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ entry: latexEntry }),
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(`Entry successfully added to ${result.fileName}`);
+                    e.target.reset();
+                } else {
+                    showStatus('Failed to save entry', true);
+                }
+            } catch (error) {
+                showStatus('Error: Could not connect to server', true);
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

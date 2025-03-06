@@ -1,0 +1,12 @@
+{
+  "name": "form_to_latex",
+  "version": "1.0.0",
+  "description": "Form to LaTeX file converter",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+} 
