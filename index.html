@@ -12,7 +12,12 @@
             padding: 20px;
             background-color: #f5f5f5;
         }
-        .form-container {
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        .form-container, .files-container {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
@@ -69,42 +74,99 @@
             background-color: #f2dede;
             color: #a94442;
         }
+        .files-list {
+            margin-top: 10px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+        }
+        .file-item:hover {
+            background-color: #f0f0f0;
+        }
+        .file-info {
+            flex-grow: 1;
+        }
+        .download-btn {
+            background-color: #007bff;
+            margin-left: 10px;
+        }
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
+        .refresh-btn {
+            background-color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .refresh-btn:hover {
+            background-color: #5a6268;
+        }
+        .clear-data-btn {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+        .clear-data-btn:hover {
+            background-color: #c82333;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="form-container">
-        <h1>LaTeX Entry Form</h1>
-        <div id="currentFile"></div>
-        <form id="latexForm">
-            <div class="form-group">
-                <label for="entry_name">Entry Name:</label>
-                <input type="text" id="entry_name" required>
+    <div class="container">
+        <div class="form-container">
+            <div class="header">
+                <h1>LaTeX Entry Form</h1>
+                <button class="clear-data-btn" onclick="clearUserData()">Clear My Data</button>
             </div>
-            <div class="form-group">
-                <label for="authors">Authors:</label>
-                <input type="text" id="authors" required>
-            </div>
-            <div class="form-group">
-                <label for="title">Title:</label>
-                <textarea id="title" rows="3" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="source">Source:</label>
-                <input type="text" id="source">
-            </div>
-            <div class="form-group">
-                <label for="venue">Venue:</label>
-                <input type="text" id="venue">
-            </div>
-            <div class="form-group">
-                <label for="date">Date:</label>
-                <input type="text" id="date" required>
-            </div>
-            <button type="submit">Add Entry</button>
-        </form>
-        
-        <div class="preview" id="preview"></div>
-        <div id="status"></div>
+            <div id="currentFile"></div>
+            <form id="latexForm">
+                <div class="form-group">
+                    <label for="entry_name">Entry Name:</label>
+                    <input type="text" id="entry_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="authors">Authors:</label>
+                    <input type="text" id="authors" required>
+                </div>
+                <div class="form-group">
+                    <label for="title">Title:</label>
+                    <textarea id="title" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="source">Source:</label>
+                    <input type="text" id="source">
+                </div>
+                <div class="form-group">
+                    <label for="venue">Venue:</label>
+                    <input type="text" id="venue">
+                </div>
+                <div class="form-group">
+                    <label for="date">Date:</label>
+                    <input type="text" id="date" required>
+                </div>
+                <button type="submit">Add Entry</button>
+            </form>
+            
+            <div class="preview" id="preview"></div>
+            <div id="status"></div>
+        </div>
+
+        <div class="files-container">
+            <h2>Recent Files (Last 7 Days)</h2>
+            <button class="refresh-btn" onclick="loadFiles()">Refresh Files</button>
+            <div class="files-list" id="filesList"></div>
+        </div>
     </div>
 
     <script>
@@ -117,6 +179,19 @@
 
         function formatDisplayDate(date) {
             return date.toISOString().split('T')[0];
+        }
+
+        function formatFileDate(dateStr) {
+            const year = dateStr.slice(0, 4);
+            const month = dateStr.slice(4, 6);
+            const day = dateStr.slice(6, 8);
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
         function formatLatexEntry(formData) {
@@ -140,6 +215,41 @@
             statusDiv.className = `status ${isError ? 'error' : 'success'}`;
         }
 
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const files = await response.json();
+                
+                const filesList = document.getElementById('filesList');
+                filesList.innerHTML = '';
+                
+                files.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'file-info';
+                    fileInfo.innerHTML = `
+                        <strong>${formatFileDate(file.date)}</strong>
+                        <br>
+                        <small>Size: ${formatFileSize(file.size)}</small>
+                    `;
+                    
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.className = 'download-btn';
+                    downloadBtn.textContent = 'Download';
+                    downloadBtn.onclick = () => window.location.href = `/api/files/${file.name}`;
+                    
+                    fileItem.appendChild(fileInfo);
+                    fileItem.appendChild(downloadBtn);
+                    filesList.appendChild(fileItem);
+                });
+            } catch (error) {
+                console.error('Error loading files:', error);
+                showStatus('Failed to load files', true);
+            }
+        }
+
         // Update current file display
         function updateCurrentFileDisplay() {
             const now = new Date();
@@ -147,8 +257,9 @@
             document.getElementById('currentFile').textContent = `Current file: ${fileName}`;
         }
 
-        // Initial display
+        // Initial display and file load
         updateCurrentFileDisplay();
+        loadFiles();
 
         // Update display every minute
         setInterval(updateCurrentFileDisplay, 60000);
@@ -182,6 +293,7 @@
                 if (result.success) {
                     showStatus(`Entry successfully added to ${result.fileName}`);
                     e.target.reset();
+                    loadFiles();
                 } else {
                     showStatus('Failed to save entry', true);
                 }
@@ -190,6 +302,33 @@
                 console.error('Error:', error);
             }
         });
+
+        async function clearUserData() {
+            if (!confirm('Are you sure you want to clear all your data? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('All data cleared successfully. Refreshing page...');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showStatus('Failed to clear data', true);
+                }
+            } catch (error) {
+                showStatus('Error: Could not connect to server', true);
+                console.error('Error:', error);
+            }
+        }
     </script>
 </body>
 </html> 

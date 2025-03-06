@@ -1,2 +1,4 @@
 entries
 entries/*
+node_modules
+node_modules/*
